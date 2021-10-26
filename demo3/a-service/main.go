@@ -127,7 +127,7 @@ func serviceB(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		"http://localhost:4000",
+		"http://localhost:3001",
 		nil,
 	)
 	if err != nil {

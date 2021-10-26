@@ -62,7 +62,7 @@ func main() {
 	}()
 
 	srv := &http.Server{
-		Addr: "localhost:4000",
+		Addr: "localhost:3001",
 		Handler: otelhttp.NewHandler(
 			handler(),
 			"http.server",

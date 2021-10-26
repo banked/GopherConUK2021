@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,6 +28,8 @@ var (
 )
 
 func init() {
+	log.Logger = zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
+
 	// Create the exporter
 	exp, err := jaeger.New(jaeger.WithAgentEndpoint())
 	if err != nil {
@@ -35,7 +39,7 @@ func init() {
 	// Define resource attributes
 	resource := resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("demo3-a-service"),
+		semconv.ServiceNameKey.String("demo4-service"),
 		semconv.ServiceVersionKey.String("1.0.0"),
 		semconv.DeploymentEnvironmentKey.String("production"),
 		attribute.Int64("ID", 1234),
@@ -48,7 +52,7 @@ func init() {
 	)
 
 	// Set the tracer for the package
-	tracer = provider.Tracer("github.com/banked/gopherconuk21/demo3/a-service")
+	tracer = provider.Tracer("github.com/banked/gopherconuk21/demo4")
 }
 
 func main() {
@@ -56,12 +60,12 @@ func main() {
 
 	defer func() {
 		if err := provider.Shutdown(ctx); err != nil {
-			log.Println(err)
+			log.Error().Err(err).Send()
 		}
 	}()
 
 	srv := &http.Server{
-		Addr: "localhost:3000",
+		Addr: "localhost:4000",
 		Handler: otelhttp.NewHandler(
 			handler(),
 			"http.server",
@@ -75,17 +79,18 @@ func main() {
 
 		if err := srv.ListenAndServe(); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
-				log.Println(err)
+				log.Error().Err(err).Send()
 			}
 		}
 	}()
 
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, syscall.SIGINT, syscall.SIGTERM)
-	log.Println(<-sigC)
+	sig := <-sigC
+	log.Debug().Stringer("signal", sig).Send()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Println(err)
+		log.Error().Err(err).Send()
 	}
 
 	<-doneC
@@ -98,46 +103,38 @@ func handler() http.Handler {
 		ctx, span := tracer.Start(ctx, "handler")
 		defer span.End()
 
-		log.Println(span.SpanContext().TraceID())
-
-		if err := serviceB(ctx); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-
-			return
-		}
+		foo(ctx)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("demo3-a-service"))
+		w.Write([]byte("demo4-service"))
 	})
 }
 
-func client() *http.Client {
-	return &http.Client{
-		Transport: otelhttp.NewTransport(
-			http.DefaultTransport,
-			otelhttp.WithPropagators(propagator),
-		),
-	}
-}
-
-func serviceB(ctx context.Context) error {
-	_, span := tracer.Start(ctx, "serviceB")
+func foo(ctx context.Context) {
+	_, span := tracer.Start(ctx, "foo")
 	defer span.End()
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		"http://localhost:4000",
-		nil,
-	)
-	if err != nil {
-		return err
-	}
+	l := log.Hook(SpanLogHook(span))
+	l.Debug().Send()
 
-	_, err = client().Do(req)
-	if err != nil {
-		return err
-	}
+	// Simulate work
+	time.Sleep(time.Second)
+}
 
-	return nil
+// SpanLogHook adds a gook into a zerolog.Logger if the span is
+// recording and has a valid TraceID and SpanID.
+func SpanLogHook(span trace.Span) zerolog.Hook {
+	return zerolog.HookFunc(func(event *zerolog.Event, _ zerolog.Level, _ string) {
+		if span.IsRecording() {
+			ctx := span.SpanContext()
+
+			if ctx.HasTraceID() {
+				event.Str("traceID", ctx.TraceID().String())
+			}
+
+			if ctx.HasSpanID() {
+				event.Str("spanID", ctx.SpanID().String())
+			}
+		}
+	})
 }

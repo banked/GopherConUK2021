@@ -27,8 +27,6 @@ var (
 )
 
 func init() {
-	// otel.SetTextMapPropagator(b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader)))
-
 	// Create the exporter
 	exp, err := jaeger.New(jaeger.WithAgentEndpoint())
 	if err != nil {
@@ -38,7 +36,7 @@ func init() {
 	// Define resource attributes
 	resource := resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("b-service"),
+		semconv.ServiceNameKey.String("demo3-b-service"),
 		semconv.ServiceVersionKey.String("1.0.0"),
 		semconv.DeploymentEnvironmentKey.String("production"),
 		attribute.Int64("ID", 1234),
@@ -104,7 +102,7 @@ func handler() http.Handler {
 		foo(ctx)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("b-service"))
+		w.Write([]byte("demo3-b-service"))
 	})
 }
 

@@ -28,7 +28,7 @@ func init() {
 	// Define resource attributes
 	resource := resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("demo-service"),
+		semconv.ServiceNameKey.String("demo2-service"),
 		semconv.ServiceVersionKey.String("1.0.0"),
 		semconv.DeploymentEnvironmentKey.String("production"),
 		attribute.Int64("ID", 1234),

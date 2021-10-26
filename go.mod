@@ -1,4 +1,4 @@
-module github.com/banked/gopherconuk21
+module github.com/banked/gopherconuk2021
 
 go 1.17
 

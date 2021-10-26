@@ -61,7 +61,7 @@ func init() {
 
 	global.SetMeterProvider(exporter.MeterProvider())
 
-	meter = exporter.MeterProvider().Meter("github.com/banked/gopherconuk2/demo5")
+	meter = exporter.MeterProvider().Meter("github.com/banked/gopherconuk2021/demo5")
 }
 
 func main() {

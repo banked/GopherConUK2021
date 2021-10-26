@@ -52,7 +52,7 @@ func init() {
 	)
 
 	// Set the tracer for the package
-	tracer = provider.Tracer("github.com/banked/gopherconuk21/demo4")
+	tracer = provider.Tracer("github.com/banked/gopherconuk2021/demo4")
 }
 
 func main() {
